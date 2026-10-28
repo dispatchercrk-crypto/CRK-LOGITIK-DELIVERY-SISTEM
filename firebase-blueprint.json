@@ -1,0 +1,699 @@
+{
+  "entities": {
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator registry entry keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the administrator."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160,
+          "description": "Verified administrator email address."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "DriverPublic": {
+      "title": "DriverPublic",
+      "description": "Non-PII operational Master Driver profile.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Driver code identifier (e.g., DRV-001)."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Full name of the driver."
+        },
+        "licenseType": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40,
+          "description": "Driver license classification (e.g., SIM B1 Umum)."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the driver is active for login and dispatch."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the owning dispatcher."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "licenseType",
+        "active",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DriverSecret": {
+      "title": "DriverSecret",
+      "description": "Isolated PII & login credentials for a Master Driver.",
+      "type": "object",
+      "properties": {
+        "driverId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Parent driver document ID."
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40,
+          "description": "Driver WhatsApp phone number."
+        },
+        "pin": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "description": "Driver login PIN."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the owning dispatcher."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "driverId",
+        "phone",
+        "pin",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VehicleDoc": {
+      "title": "VehicleDoc",
+      "description": "Cold chain refrigerated fleet unit (Master Armada).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Fleet unit code (e.g., UNT-001)."
+        },
+        "plateNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Vehicle license plate number."
+        },
+        "vehicleType": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100,
+          "description": "Reefer box / vehicle specification."
+        },
+        "capacity": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80,
+          "description": "Payload capacity specification."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Siap Jalan", "Dalam Tugas", "Perawatan"],
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Operational availability status."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the owning dispatcher."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "plateNumber",
+        "vehicleType",
+        "capacity",
+        "status",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OriginDoc": {
+      "title": "OriginDoc",
+      "description": "Origin Cold Storage facility (Master Lokasi Asal).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Origin facility code (e.g., LOC-001)."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "Origin cold storage name."
+        },
+        "address": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300,
+          "description": "Facility address or dock notes."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the owning dispatcher."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "address",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RouteDoc": {
+      "title": "RouteDoc",
+      "description": "Delivery destination & PIC contact (Master Rute Tujuan).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Destination route code (e.g., RT-001)."
+        },
+        "destination": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Destination name or hub."
+        },
+        "picName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120,
+          "description": "Destination PIC name."
+        },
+        "picPhone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40,
+          "description": "Destination PIC WhatsApp phone."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the owning dispatcher."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "destination",
+        "picName",
+        "picPhone",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AssignmentDoc": {
+      "title": "AssignmentDoc",
+      "description": "Cold chain delivery assignment manifest & temperature log (Surat Tugas).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique assignment identifier."
+        },
+        "sequenceNumber": {
+          "type": "integer",
+          "description": "Sequential numbering index."
+        },
+        "noPenugasan": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Formatted sequential Surat Tugas number."
+        },
+        "noSuratJalanFisik": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 80,
+          "description": "Physical delivery note number."
+        },
+        "kodeSegel": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64,
+          "description": "Reefer box seal code."
+        },
+        "tanggalTugas": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Scheduled assignment date (YYYY-MM-DD)."
+        },
+        "jadwalJamTiba": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 16,
+          "description": "Optional target SLA arrival time (HH:mm)."
+        },
+        "driverCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Assigned driver code."
+        },
+        "driverName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Assigned driver full name."
+        },
+        "driverPhone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40,
+          "description": "Assigned driver phone."
+        },
+        "vehicleCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64,
+          "description": "Assigned fleet unit code."
+        },
+        "plateNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Assigned vehicle license plate."
+        },
+        "vehicleType": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 100,
+          "description": "Assigned reefer vehicle type."
+        },
+        "originCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64,
+          "description": "Origin facility code."
+        },
+        "origin": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Origin facility name."
+        },
+        "routeCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64,
+          "description": "Route code."
+        },
+        "destination": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Delivery destination."
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 240,
+          "description": "Cold chain cargo description and target temperature."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Menunggu Berangkat", "Dalam Perjalanan", "Selesai"],
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Current cold chain delivery status."
+        },
+        "depTimestamp": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64,
+          "description": "ISO departure timestamp."
+        },
+        "depKmAwal": {
+          "type": "number",
+          "description": "Departure odometer reading (-1 when unset)."
+        },
+        "depSuhuAwal": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "description": "Manual departure temperature reading."
+        },
+        "depBbmAwal": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "description": "Departure fuel level."
+        },
+        "depKondisi": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120,
+          "description": "Departure vehicle condition."
+        },
+        "depCatatan": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500,
+          "description": "Departure notes."
+        },
+        "hoTimestamp": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64,
+          "description": "ISO handover timestamp."
+        },
+        "hoKmAkhir": {
+          "type": "number",
+          "description": "Handover odometer reading (-1 when unset)."
+        },
+        "hoSuhuAkhir": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "description": "Manual handover temperature reading."
+        },
+        "hoBbmAkhir": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "description": "Handover fuel level."
+        },
+        "hoPenerima": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120,
+          "description": "Recipient name at destination."
+        },
+        "hoKondisi": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120,
+          "description": "Handover cargo & seal condition."
+        },
+        "hoCatatan": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500,
+          "description": "Handover notes."
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500,
+          "description": "Dispatcher instructions."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the owning dispatcher."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "id",
+        "sequenceNumber",
+        "noPenugasan",
+        "noSuratJalanFisik",
+        "kodeSegel",
+        "tanggalTugas",
+        "jadwalJamTiba",
+        "driverCode",
+        "driverName",
+        "driverPhone",
+        "vehicleCode",
+        "plateNumber",
+        "vehicleType",
+        "originCode",
+        "origin",
+        "routeCode",
+        "destination",
+        "purpose",
+        "status",
+        "depTimestamp",
+        "depKmAwal",
+        "depSuhuAwal",
+        "depBbmAwal",
+        "depKondisi",
+        "depCatatan",
+        "hoTimestamp",
+        "hoKmAkhir",
+        "hoSuhuAkhir",
+        "hoBbmAkhir",
+        "hoPenerima",
+        "hoKondisi",
+        "hoCatatan",
+        "notes",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OperationalConfig": {
+      "title": "OperationalConfig",
+      "description": "Operational configuration document keyed by dispatcher UID.",
+      "type": "object",
+      "properties": {
+        "spreadsheetId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 160,
+          "description": "Connected Google Spreadsheet ID."
+        },
+        "spreadsheetTitle": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200,
+          "description": "Connected Google Spreadsheet title."
+        },
+        "spreadsheetUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300,
+          "description": "Connected Google Spreadsheet URL."
+        },
+        "dispatcherWaPhone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64,
+          "description": "Dispatcher WhatsApp phone number."
+        },
+        "whatsappTargetMode": {
+          "type": "string",
+          "enum": ["GROUP", "DIRECT"],
+          "minLength": 5,
+          "maxLength": 6,
+          "description": "Default 1-click WhatsApp target mode."
+        },
+        "whatsappGroupName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 120,
+          "description": "Operational WhatsApp Group name."
+        },
+        "whatsappGroupInviteUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300,
+          "description": "Optional WhatsApp Group invite link or gateway JID."
+        },
+        "letterPrefix": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "Sequential Surat Tugas prefix."
+        },
+        "lastSequence": {
+          "type": "integer",
+          "description": "Last issued sequence number."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "UID of the owning dispatcher."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Immutable server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "spreadsheetId",
+        "spreadsheetTitle",
+        "spreadsheetUrl",
+        "dispatcherWaPhone",
+        "whatsappTargetMode",
+        "whatsappGroupName",
+        "whatsappGroupInviteUrl",
+        "letterPrefix",
+        "lastSequence",
+        "ownerUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Verified administrator UID registry."
+    },
+    "/drivers/{driverId}": {
+      "schema": { "$ref": "#/entities/DriverPublic" },
+      "description": "Master Driver non-PII profiles."
+    },
+    "/drivers/{driverId}/private/{secretId}": {
+      "schema": { "$ref": "#/entities/DriverSecret" },
+      "description": "Isolated PII & PIN credentials subcollection for Master Driver."
+    },
+    "/vehicles/{vehicleId}": {
+      "schema": { "$ref": "#/entities/VehicleDoc" },
+      "description": "Master Armada refrigerated vehicles."
+    },
+    "/origins/{originId}": {
+      "schema": { "$ref": "#/entities/OriginDoc" },
+      "description": "Master Lokasi Asal cold storage facilities."
+    },
+    "/routes/{routeId}": {
+      "schema": { "$ref": "#/entities/RouteDoc" },
+      "description": "Master Rute delivery destinations."
+    },
+    "/assignments/{assignmentId}": {
+      "schema": { "$ref": "#/entities/AssignmentDoc" },
+      "description": "Cold chain Surat Tugas manifests and temperature/odometer logs."
+    },
+    "/configs/{configId}": {
+      "schema": { "$ref": "#/entities/OperationalConfig" },
+      "description": "Dispatcher operational configuration keyed by owner UID."
+    }
+  }
+}

@@ -1,0 +1,493 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 1. Hardened Reusable Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidCodeId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'dispatchercrk@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // 2. Entity Validation Blueprints (Synced verbatim with firebase-blueprint.json)
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidDriverPublic(data) {
+      return data.keys().hasAll(['id', 'name', 'licenseType', 'active', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'name', 'licenseType', 'active', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 64 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.licenseType is string && data.licenseType.size() <= 40 &&
+        data.active is bool &&
+        data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 && data.ownerUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerUid == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidDriverSecret(data) {
+      return data.keys().hasAll(['driverId', 'phone', 'pin', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['driverId', 'phone', 'pin', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.driverId is string && data.driverId.size() >= 1 && data.driverId.size() <= 64 && data.driverId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.phone is string && data.phone.size() <= 40 &&
+        data.pin is string && data.pin.size() <= 32 &&
+        data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 && data.ownerUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerUid == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidVehicleDoc(data) {
+      return data.keys().hasAll(['id', 'plateNumber', 'vehicleType', 'capacity', 'status', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'plateNumber', 'vehicleType', 'capacity', 'status', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 64 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.plateNumber is string && data.plateNumber.size() >= 1 && data.plateNumber.size() <= 32 &&
+        data.vehicleType is string && data.vehicleType.size() <= 100 &&
+        data.capacity is string && data.capacity.size() <= 80 &&
+        data.status is string && data.status.size() >= 1 && data.status.size() <= 32 &&
+        (data.status == 'Siap Jalan' || data.status == 'Dalam Tugas' || data.status == 'Perawatan') &&
+        data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 && data.ownerUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerUid == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidOriginDoc(data) {
+      return data.keys().hasAll(['id', 'name', 'address', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'name', 'address', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 64 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
+        data.address is string && data.address.size() <= 300 &&
+        data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 && data.ownerUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerUid == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidRouteDoc(data) {
+      return data.keys().hasAll(['id', 'destination', 'picName', 'picPhone', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'destination', 'picName', 'picPhone', 'ownerUid', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 64 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.destination is string && data.destination.size() >= 1 && data.destination.size() <= 200 &&
+        data.picName is string && data.picName.size() <= 120 &&
+        data.picPhone is string && data.picPhone.size() <= 40 &&
+        data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 && data.ownerUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerUid == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAssignmentDoc(data) {
+      return data.keys().hasAll([
+          'id', 'sequenceNumber', 'noPenugasan', 'noSuratJalanFisik', 'kodeSegel',
+          'tanggalTugas', 'jadwalJamTiba', 'driverCode', 'driverName', 'driverPhone',
+          'vehicleCode', 'plateNumber', 'vehicleType', 'originCode', 'origin',
+          'routeCode', 'destination', 'purpose', 'status',
+          'depTimestamp', 'depKmAwal', 'depSuhuAwal', 'depBbmAwal', 'depKondisi', 'depCatatan',
+          'hoTimestamp', 'hoKmAkhir', 'hoSuhuAkhir', 'hoBbmAkhir', 'hoPenerima', 'hoKondisi', 'hoCatatan',
+          'notes', 'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'sequenceNumber', 'noPenugasan', 'noSuratJalanFisik', 'kodeSegel',
+          'tanggalTugas', 'jadwalJamTiba', 'driverCode', 'driverName', 'driverPhone',
+          'vehicleCode', 'plateNumber', 'vehicleType', 'originCode', 'origin',
+          'routeCode', 'destination', 'purpose', 'status',
+          'depTimestamp', 'depKmAwal', 'depSuhuAwal', 'depBbmAwal', 'depKondisi', 'depCatatan',
+          'hoTimestamp', 'hoKmAkhir', 'hoSuhuAkhir', 'hoBbmAkhir', 'hoPenerima', 'hoKondisi', 'hoCatatan',
+          'notes', 'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.sequenceNumber is int && data.sequenceNumber >= 1 &&
+        data.noPenugasan is string && data.noPenugasan.size() >= 1 && data.noPenugasan.size() <= 80 &&
+        data.noSuratJalanFisik is string && data.noSuratJalanFisik.size() <= 80 &&
+        data.kodeSegel is string && data.kodeSegel.size() <= 64 &&
+        data.tanggalTugas is string && data.tanggalTugas.size() >= 1 && data.tanggalTugas.size() <= 32 &&
+        data.jadwalJamTiba is string && data.jadwalJamTiba.size() <= 16 &&
+        data.driverCode is string && data.driverCode.size() >= 1 && data.driverCode.size() <= 64 &&
+        data.driverName is string && data.driverName.size() >= 1 && data.driverName.size() <= 120 &&
+        data.driverPhone is string && data.driverPhone.size() <= 40 &&
+        data.vehicleCode is string && data.vehicleCode.size() <= 64 &&
+        data.plateNumber is string && data.plateNumber.size() >= 1 && data.plateNumber.size() <= 32 &&
+        data.vehicleType is string && data.vehicleType.size() <= 100 &&
+        data.originCode is string && data.originCode.size() <= 64 &&
+        data.origin is string && data.origin.size() >= 1 && data.origin.size() <= 200 &&
+        data.routeCode is string && data.routeCode.size() <= 64 &&
+        data.destination is string && data.destination.size() >= 1 && data.destination.size() <= 200 &&
+        data.purpose is string && data.purpose.size() <= 240 &&
+        data.status is string && data.status.size() >= 1 && data.status.size() <= 32 &&
+        (data.status == 'Menunggu Berangkat' || data.status == 'Dalam Perjalanan' || data.status == 'Selesai') &&
+        data.depTimestamp is string && data.depTimestamp.size() <= 64 &&
+        data.depKmAwal is number &&
+        data.depSuhuAwal is string && data.depSuhuAwal.size() <= 32 &&
+        data.depBbmAwal is string && data.depBbmAwal.size() <= 32 &&
+        data.depKondisi is string && data.depKondisi.size() <= 120 &&
+        data.depCatatan is string && data.depCatatan.size() <= 500 &&
+        data.hoTimestamp is string && data.hoTimestamp.size() <= 64 &&
+        data.hoKmAkhir is number &&
+        data.hoSuhuAkhir is string && data.hoSuhuAkhir.size() <= 32 &&
+        data.hoBbmAkhir is string && data.hoBbmAkhir.size() <= 32 &&
+        data.hoPenerima is string && data.hoPenerima.size() <= 120 &&
+        data.hoKondisi is string && data.hoKondisi.size() <= 120 &&
+        data.hoCatatan is string && data.hoCatatan.size() <= 500 &&
+        data.notes is string && data.notes.size() <= 500 &&
+        data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 && data.ownerUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerUid == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidOperationalConfig(data) {
+      return data.keys().hasAll([
+          'spreadsheetId', 'spreadsheetTitle', 'spreadsheetUrl',
+          'dispatcherWaPhone', 'whatsappTargetMode', 'whatsappGroupName',
+          'whatsappGroupInviteUrl', 'letterPrefix', 'lastSequence',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'spreadsheetId', 'spreadsheetTitle', 'spreadsheetUrl',
+          'dispatcherWaPhone', 'whatsappTargetMode', 'whatsappGroupName',
+          'whatsappGroupInviteUrl', 'letterPrefix', 'lastSequence',
+          'ownerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.spreadsheetId is string && data.spreadsheetId.size() <= 160 &&
+        data.spreadsheetTitle is string && data.spreadsheetTitle.size() <= 200 &&
+        data.spreadsheetUrl is string && data.spreadsheetUrl.size() <= 300 &&
+        data.dispatcherWaPhone is string && data.dispatcherWaPhone.size() <= 64 &&
+        data.whatsappTargetMode is string && data.whatsappTargetMode.size() >= 5 && data.whatsappTargetMode.size() <= 6 &&
+        (data.whatsappTargetMode == 'GROUP' || data.whatsappTargetMode == 'DIRECT') &&
+        data.whatsappGroupName is string && data.whatsappGroupName.size() <= 120 &&
+        data.whatsappGroupInviteUrl is string && data.whatsappGroupInviteUrl.size() <= 300 &&
+        data.letterPrefix is string && data.letterPrefix.size() >= 1 && data.letterPrefix.size() <= 32 &&
+        data.lastSequence is int && data.lastSequence >= 0 &&
+        data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 && data.ownerUid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerUid == request.auth.uid &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // 3. Collection Security Rules
+
+    // /admins/{adminUid} — Trusted Admin Registry (No list allowed)
+    match /admins/{adminUid} {
+      allow get: if isVerifiedUser() && isValidId(adminUid) && request.auth.uid == adminUid;
+      allow list: if false;
+      allow create: if isVerifiedUser() &&
+        isValidId(adminUid) &&
+        request.auth.uid == adminUid &&
+        request.auth.token.email == 'dispatchercrk@gmail.com' &&
+        isValidAdminRecord(incoming()) &&
+        incoming().email == request.auth.token.email &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // /drivers/{driverId} — Non-PII Master Driver + Atomic Private Credentials Subcollection
+    match /drivers/{driverId} {
+      allow get: if isVerifiedUser() && isValidCodeId(driverId) && (resource == null || existing().ownerUid == request.auth.uid);
+      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow create: if isVerifiedUser() &&
+        isValidCodeId(driverId) &&
+        isValidDriverPublic(incoming()) &&
+        incoming().id == driverId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        existsAfter(/databases/$(database)/documents/drivers/$(driverId)/private/credentials);
+      allow update: if (
+        isVerifiedUser() &&
+        isValidCodeId(driverId) &&
+        isValidDriverPublic(incoming()) &&
+        resource != null &&
+        existing().ownerUid == request.auth.uid &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'licenseType', 'active', 'updatedAt']) ||
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'licenseType', 'active', 'updatedAt']))
+        )
+      );
+      allow delete: if isVerifiedUser() &&
+        isValidCodeId(driverId) &&
+        resource != null &&
+        existing().ownerUid == request.auth.uid &&
+        !existsAfter(/databases/$(database)/documents/drivers/$(driverId)/private/credentials);
+
+      // PII Split Collection: /drivers/{driverId}/private/{secretId}
+      match /private/{secretId} {
+        allow get: if isVerifiedUser() &&
+          isValidCodeId(driverId) &&
+          isValidId(secretId) &&
+          secretId == 'credentials' &&
+          exists(/databases/$(database)/documents/drivers/$(driverId)) &&
+          get(/databases/$(database)/documents/drivers/$(driverId)).data.ownerUid == request.auth.uid &&
+          (resource == null || existing().ownerUid == request.auth.uid);
+        allow list: if false;
+        allow create: if isVerifiedUser() &&
+          isValidCodeId(driverId) &&
+          isValidId(secretId) &&
+          secretId == 'credentials' &&
+          isValidDriverSecret(incoming()) &&
+          incoming().driverId == driverId &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          existsAfter(/databases/$(database)/documents/drivers/$(driverId)) &&
+          getAfter(/databases/$(database)/documents/drivers/$(driverId)).data.ownerUid == request.auth.uid;
+        allow update: if (
+          isVerifiedUser() &&
+          isValidCodeId(driverId) &&
+          isValidId(secretId) &&
+          secretId == 'credentials' &&
+          isValidDriverSecret(incoming()) &&
+          resource != null &&
+          existing().ownerUid == request.auth.uid &&
+          incoming().ownerUid == existing().ownerUid &&
+          incoming().driverId == existing().driverId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/drivers/$(driverId)) &&
+          get(/databases/$(database)/documents/drivers/$(driverId)).data.ownerUid == request.auth.uid &&
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['phone', 'pin', 'updatedAt']) ||
+            (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['phone', 'pin', 'updatedAt']))
+          )
+        );
+        allow delete: if isVerifiedUser() &&
+          isValidCodeId(driverId) &&
+          isValidId(secretId) &&
+          secretId == 'credentials' &&
+          resource != null &&
+          existing().ownerUid == request.auth.uid;
+      }
+    }
+
+    // /vehicles/{vehicleId} — Master Armada
+    match /vehicles/{vehicleId} {
+      allow get: if isVerifiedUser() && isValidCodeId(vehicleId) && (resource == null || existing().ownerUid == request.auth.uid);
+      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow create: if isVerifiedUser() &&
+        isValidCodeId(vehicleId) &&
+        isValidVehicleDoc(incoming()) &&
+        incoming().id == vehicleId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if (
+        isVerifiedUser() &&
+        isValidCodeId(vehicleId) &&
+        isValidVehicleDoc(incoming()) &&
+        resource != null &&
+        existing().ownerUid == request.auth.uid &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['plateNumber', 'vehicleType', 'capacity', 'status', 'updatedAt']) ||
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['plateNumber', 'vehicleType', 'capacity', 'status', 'updatedAt']))
+        )
+      );
+      allow delete: if isVerifiedUser() && isValidCodeId(vehicleId) && resource != null && existing().ownerUid == request.auth.uid;
+    }
+
+    // /origins/{originId} — Master Lokasi Asal
+    match /origins/{originId} {
+      allow get: if isVerifiedUser() && isValidCodeId(originId) && (resource == null || existing().ownerUid == request.auth.uid);
+      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow create: if isVerifiedUser() &&
+        isValidCodeId(originId) &&
+        isValidOriginDoc(incoming()) &&
+        incoming().id == originId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if (
+        isVerifiedUser() &&
+        isValidCodeId(originId) &&
+        isValidOriginDoc(incoming()) &&
+        resource != null &&
+        existing().ownerUid == request.auth.uid &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'address', 'updatedAt']) ||
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'address', 'updatedAt']))
+        )
+      );
+      allow delete: if isVerifiedUser() && isValidCodeId(originId) && resource != null && existing().ownerUid == request.auth.uid;
+    }
+
+    // /routes/{routeId} — Master Rute Tujuan (PII picPhone restricted to ownerUid)
+    match /routes/{routeId} {
+      allow get: if isVerifiedUser() && isValidCodeId(routeId) && (resource == null || existing().ownerUid == request.auth.uid);
+      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow create: if isVerifiedUser() &&
+        isValidCodeId(routeId) &&
+        isValidRouteDoc(incoming()) &&
+        incoming().id == routeId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if (
+        isVerifiedUser() &&
+        isValidCodeId(routeId) &&
+        isValidRouteDoc(incoming()) &&
+        resource != null &&
+        existing().ownerUid == request.auth.uid &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['destination', 'picName', 'picPhone', 'updatedAt']) ||
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['destination', 'picName', 'picPhone', 'updatedAt']))
+        )
+      );
+      allow delete: if isVerifiedUser() && isValidCodeId(routeId) && resource != null && existing().ownerUid == request.auth.uid;
+    }
+
+    // /assignments/{assignmentId} — Cold Chain Surat Tugas (with Terminal State Locking on 'Selesai')
+    match /assignments/{assignmentId} {
+      allow get: if isVerifiedUser() && isValidId(assignmentId) && (resource == null || existing().ownerUid == request.auth.uid);
+      allow list: if isVerifiedUser() && existing().ownerUid == request.auth.uid;
+      allow create: if isVerifiedUser() &&
+        isValidId(assignmentId) &&
+        isValidAssignmentDoc(incoming()) &&
+        incoming().id == assignmentId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if (
+        isVerifiedUser() &&
+        isValidId(assignmentId) &&
+        isValidAssignmentDoc(incoming()) &&
+        resource != null &&
+        existing().ownerUid == request.auth.uid &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().id == existing().id &&
+        incoming().sequenceNumber == existing().sequenceNumber &&
+        incoming().noPenugasan == existing().noPenugasan &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Tier 2: Active Dispatch Transitions (Blocked once terminal state 'Selesai' is reached)
+          (
+            existing().status != 'Selesai' &&
+            (
+              // Action A: Departure Report
+              (incoming().status == 'Dalam Perjalanan' &&
+               incoming().diff(existing()).affectedKeys().hasOnly([
+                 'status', 'depTimestamp', 'depKmAwal', 'depSuhuAwal',
+                 'depBbmAwal', 'depKondisi', 'depCatatan', 'updatedAt'
+               ])) ||
+              // Action B: Handover Completion (Transitions to Terminal 'Selesai')
+              (incoming().status == 'Selesai' &&
+               incoming().diff(existing()).affectedKeys().hasOnly([
+                 'status', 'hoTimestamp', 'hoKmAkhir', 'hoSuhuAkhir',
+                 'hoBbmAkhir', 'hoPenerima', 'hoKondisi', 'hoCatatan', 'updatedAt'
+               ])) ||
+              // Action C: Active Manifest / Schedule Update
+              incoming().diff(existing()).affectedKeys().hasOnly([
+                'noSuratJalanFisik', 'kodeSegel', 'tanggalTugas', 'jadwalJamTiba',
+                'driverCode', 'driverName', 'driverPhone', 'vehicleCode',
+                'plateNumber', 'vehicleType', 'originCode', 'origin',
+                'routeCode', 'destination', 'purpose', 'notes', 'status',
+                'depTimestamp', 'depKmAwal', 'depSuhuAwal', 'depBbmAwal', 'depKondisi', 'depCatatan',
+                'hoTimestamp', 'hoKmAkhir', 'hoSuhuAkhir', 'hoBbmAkhir', 'hoPenerima', 'hoKondisi', 'hoCatatan',
+                'updatedAt'
+              ])
+            )
+          ) ||
+          // Tier 1: Verified Admin Override (Allows correcting terminal 'Selesai' records safely)
+          (
+            isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'noSuratJalanFisik', 'kodeSegel', 'tanggalTugas', 'jadwalJamTiba',
+              'driverCode', 'driverName', 'driverPhone', 'vehicleCode',
+              'plateNumber', 'vehicleType', 'originCode', 'origin',
+              'routeCode', 'destination', 'purpose', 'notes', 'status',
+              'depTimestamp', 'depKmAwal', 'depSuhuAwal', 'depBbmAwal', 'depKondisi', 'depCatatan',
+              'hoTimestamp', 'hoKmAkhir', 'hoSuhuAkhir', 'hoBbmAkhir', 'hoPenerima', 'hoKondisi', 'hoCatatan',
+              'updatedAt'
+            ])
+          )
+        )
+      );
+      allow delete: if isVerifiedUser() && isValidId(assignmentId) && resource != null && existing().ownerUid == request.auth.uid;
+    }
+
+    // /configs/{configId} — Operational Settings keyed by ownerUid (No list allowed)
+    match /configs/{configId} {
+      allow get: if isVerifiedUser() && isValidId(configId) && configId == request.auth.uid && (resource == null || existing().ownerUid == request.auth.uid);
+      allow list: if false;
+      allow create: if isVerifiedUser() &&
+        isValidId(configId) &&
+        configId == request.auth.uid &&
+        isValidOperationalConfig(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if (
+        isVerifiedUser() &&
+        isValidId(configId) &&
+        configId == request.auth.uid &&
+        isValidOperationalConfig(incoming()) &&
+        resource != null &&
+        existing().ownerUid == request.auth.uid &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'spreadsheetId', 'spreadsheetTitle', 'spreadsheetUrl',
+            'dispatcherWaPhone', 'whatsappTargetMode', 'whatsappGroupName',
+            'whatsappGroupInviteUrl', 'letterPrefix', 'lastSequence', 'updatedAt'
+          ]) ||
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'spreadsheetId', 'spreadsheetTitle', 'spreadsheetUrl',
+            'dispatcherWaPhone', 'whatsappTargetMode', 'whatsappGroupName',
+            'whatsappGroupInviteUrl', 'letterPrefix', 'lastSequence', 'updatedAt'
+          ]))
+        )
+      );
+      allow delete: if false;
+    }
+  }
+}
